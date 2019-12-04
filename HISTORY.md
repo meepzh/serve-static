@@ -2,6 +2,8 @@
 ===================
 
   * Set stricter CSP header in redirect response
+  * Added redirect URL encryption support
+  * Added custom URL parser support
   * deps: send@0.17.1
     - deps: range-parser@~1.2.1
 

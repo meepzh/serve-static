@@ -47,6 +47,13 @@ function serveStatic (root, options) {
   // copy options object
   var opts = Object.create(options || null)
 
+  // encrypter
+  var encrypter = opts.encrypter || (text => text)
+
+  // url parsers
+  var parseUrlFunc = opts.parseUrl || parseUrl
+  var parseOriginalUrl = opts.parseOriginalUrl || parseUrl.original
+
   // fall-though
   var fallthrough = opts.fallthrough !== false
 
@@ -66,7 +73,7 @@ function serveStatic (root, options) {
 
   // construct directory listener
   var onDirectory = redirect
-    ? createRedirectDirectoryListener()
+    ? createRedirectDirectoryListener(parseOriginalUrl, encrypter)
     : createNotFoundDirectoryListener()
 
   return function serveStatic (req, res, next) {
@@ -84,8 +91,8 @@ function serveStatic (root, options) {
     }
 
     var forwardError = !fallthrough
-    var originalUrl = parseUrl.original(req)
-    var path = parseUrl(req).pathname
+    var originalUrl = parseOriginalUrl(req)
+    var path = parseUrlFunc(req).pathname
 
     // make sure redirect occurs at mount
     if (path === '/' && originalUrl.pathname.substr(-1) !== '/') {
@@ -176,10 +183,12 @@ function createNotFoundDirectoryListener () {
 
 /**
  * Create a directory listener that performs a redirect.
+ *
+ * @param {function} parseOriginalUrl
  * @private
  */
 
-function createRedirectDirectoryListener () {
+function createRedirectDirectoryListener (parseOriginalUrl, encrypter) {
   return function redirect (res) {
     if (this.hasTrailingSlash()) {
       this.error(404)
@@ -187,14 +196,14 @@ function createRedirectDirectoryListener () {
     }
 
     // get original URL
-    var originalUrl = parseUrl.original(this.req)
+    var originalUrl = parseOriginalUrl(this.req)
 
     // append trailing slash
     originalUrl.path = null
     originalUrl.pathname = collapseLeadingSlashes(originalUrl.pathname + '/')
 
     // reformat the URL
-    var loc = encodeUrl(url.format(originalUrl))
+    var loc = encrypter(encodeUrl(url.format(originalUrl)))
     var doc = createHtmlDocument('Redirecting', 'Redirecting to <a href="' + escapeHtml(loc) + '">' +
       escapeHtml(loc) + '</a>')
 
